@@ -53,7 +53,7 @@ func fetchRelease(tag string) (Release, error) {
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
-		return release, err
+		return release, fmt.Errorf("failed to release release JSON %w", err)
 	}
 
 	return release, nil
@@ -64,14 +64,14 @@ func downloadFile(url, dest string) error {
 	// Create the file
 	out, err := os.Create(dest)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create file %s : %w", dest, err)
 	}
 	defer out.Close()
 
 	// Get the data
 	resp, err := http.Get(url)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to download from %s: %w", url, err)
 	}
 	defer resp.Body.Close()
 
@@ -83,7 +83,7 @@ func downloadFile(url, dest string) error {
 	// Write the body to file
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to copy: %w", err)
 	}
 
 	return nil
@@ -93,7 +93,7 @@ func downloadFile(url, dest string) error {
 func verifyChecksum(filePath, checksumPath string) (bool, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to open file %s: %w", filePath, err)
 	}
 	defer file.Close()
 
@@ -130,7 +130,7 @@ func verifyChecksum(filePath, checksumPath string) (bool, error) {
 func unpackTarGz(src, dest string) error {
 	file, err := os.Open(src)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open file %s: %w", src, err)
 	}
 	defer file.Close()
 
@@ -170,6 +170,8 @@ func unpackTarGz(src, dest string) error {
 				return err
 			}
 			f.Close()
+		default:
+			return fmt.Errorf("unsupported file type in tar archive: %v", header.Typeflag)
 		}
 	}
 

@@ -10,9 +10,10 @@ import (
 )
 
 const (
-	fplainHttp   = "--plain-http"
-	baseImageRef = "cgr.dev/chainguard/wolfi-base:latest"
-	kitCommand   = "/app/kit"
+	fplainHttp    = "--plain-http"
+	baseImageRef  = "cgr.dev/chainguard/wolfi-base:latest"
+	kitCommand    = "/app/kit"
+	kitOpsHomeDir = "./kitops"
 )
 
 type Kit struct {
@@ -62,7 +63,7 @@ func isValidFilter(filter string) bool {
 	return allowedFilters[filter]
 }
 
-func (m *Kit) downloadKit() *dagger.File {
+func (m *Kit) downloadKit() (*dagger.File, error) {
 
 	var release Release
 	var err error
@@ -70,15 +71,14 @@ func (m *Kit) downloadKit() *dagger.File {
 		// Fetch the latest release information
 		release, err = fetchLatestRelease()
 		if err != nil {
-			fmt.Printf("Error fetching latest release: %v\n", err)
-			return nil
+			return nil, fmt.Errorf("error fetching latest release: %w", err)
 		}
 	} else {
 		// Fetch the specific version release information
 		release, err = fetchRelease(m.Version)
 		if err != nil {
-			fmt.Printf("Error fetching release %s: %v\n", m.Version, err)
-			return nil
+			return nil, fmt.Errorf("error fetching release %s: %w", m.Version, err)
+
 		}
 	}
 
@@ -92,8 +92,8 @@ func (m *Kit) downloadKit() *dagger.File {
 	}
 
 	if fileURL == "" || checksumURL == "" {
-		fmt.Println("File or checksum not found in the release assets.")
-		return nil
+		return nil, fmt.Errorf("file or checksum not found in the release assets")
+
 	}
 
 	// Destination paths
@@ -102,84 +102,99 @@ func (m *Kit) downloadKit() *dagger.File {
 
 	// Download the file and checksum
 	if err := downloadFile(fileURL, filePath); err != nil {
-		fmt.Printf("Error downloading file: %v\n", err)
-		return nil
+		return nil, fmt.Errorf("error downloading file from %s: %w", fileURL, err)
 	}
 
 	if err := downloadFile(checksumURL, checksumPath); err != nil {
-		fmt.Printf("Error downloading checksum: %v\n", err)
-		return nil
+		return nil, fmt.Errorf("error downloading checksum: %w", err)
 	}
 
 	// Verify the checksum
 	valid, err := verifyChecksum(filePath, checksumPath)
 	if err != nil {
-		fmt.Printf("Error verifying checksum: %v\n", err)
-		return nil
+		return nil, fmt.Errorf("error verifying checksum: %w", err)
 	}
 
 	if !valid {
-		fmt.Println("Checksum verification failed!")
-		return nil
+		return nil, fmt.Errorf("checksum verification failed")
 	}
-
 	fmt.Println("Checksum verified successfully.")
 
 	// Unpack the tar.gz file
 	if err := unpackTarGz(filePath, "."); err != nil {
-		fmt.Printf("Error unpacking tar.gz file: %v\n", err)
-		return nil
+		return nil, fmt.Errorf("error unpacking tar.gz file: %w", err)
 	}
-
 	fmt.Println("File unpacked successfully.")
-	return dag.CurrentModule().WorkdirFile("kit")
+
+	return dag.CurrentModule().WorkdirFile("kit"), nil
 }
 
-func (m *Kit) baseContainer() *dagger.Container {
+func (m *Kit) baseContainer(ctx context.Context) (*dagger.Container, error) {
 
 	cacheOpts := &dagger.ContainerWithMountedCacheOpts{
 		Sharing: dagger.Private,
 	}
+	kitBinary, err := m.downloadKit()
+	if err != nil {
+		return nil, err
+	}
+
 	if m.Container == nil {
 		m.Container = dag.Container().
 			From(baseImageRef).
-			WithFile(kitCommand, m.downloadKit()).
-			WithMountedCache("/.kitops", dag.CacheVolume("kitops"), *cacheOpts).
-			WithEnvVariable("KITOPS_HOME", "/.kitops")
+			WithFile(kitCommand, kitBinary).
+			WithMountedCache(kitOpsHomeDir, dag.CacheVolume("kitops"), *cacheOpts).
+			WithEnvVariable("KITOPS_HOME", kitOpsHomeDir)
 
 	}
-	return m.Container
+	return m.Container, nil
 }
 
-func (m *Kit) WithAuth(username string, password *dagger.Secret) *Kit {
+func (m *Kit) WithAuth(ctx context.Context, username string, password *dagger.Secret) (*Kit, error) {
 	cmd := []string{kitCommand, "login", "-v", m.Registry, "-u", username, "-p", "$KIT_PASSWORD"}
 	if m.PlainHTTP {
 		cmd = append(cmd, fplainHttp)
 	}
-	m.Container = m.baseContainer().
-		WithSecretVariable("KIT_PASSWORD", password).
-		WithExec([]string{"/bin/sh", "-c", strings.Join(cmd, " ")})
-	return m
+	var err error
+	m.Container, err = m.baseContainer(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = m.Container.WithSecretVariable("KIT_PASSWORD", password).
+		WithExec([]string{"/bin/sh", "-c", strings.Join(cmd, " ")}).
+		Stdout(ctx)
+	var e *dagger.ExecError
+	if err != nil {
+		if errors.As(err, &e) {
+			return nil, fmt.Errorf("authentication failed: %s", e.Stderr)
+		}
+		return nil, fmt.Errorf("error authenticating: %s", e.Stderr)
+	}
+	return m, nil
 }
 
-func (m *Kit) Pack(ctx context.Context, 
+func (m *Kit) Pack(ctx context.Context,
 	// directory to pack
-	directory *dagger.Directory, 
+	directory *dagger.Directory,
 	// tag reference
 	reference string,
 	// the kitfile
 	// +optional
-	kitfile *dagger.File ) (*Kit, error) {
+	kitfile *dagger.File) (*Kit, error) {
 	cmd := []string{kitCommand, "pack", "/mnt", "-t", reference}
-	c := m.baseContainer().
-	WithMountedDirectory("/mnt", directory).
-	WithWorkdir("/mnt")
-	
+	c, err := m.baseContainer(ctx)
+	if err != nil {
+		return nil, err
+	}
+	c = c.WithMountedDirectory("/mnt", directory).
+		WithWorkdir("/mnt")
+
 	if kitfile != nil {
 		c = c.WithFile("kitfile.yml", kitfile)
 		cmd = append(cmd, "-f", "kitfile.yml")
 	}
-	_, err := c.WithExec(cmd).
+	_, err = c.WithExec(cmd).
 		Stdout(ctx)
 	if err != nil {
 		return nil, err
@@ -203,8 +218,13 @@ func (m *Kit) Unpack(ctx context.Context,
 	if m.PlainHTTP {
 		cmd = append(cmd, fplainHttp)
 	}
-	return m.baseContainer().
-		WithExec(cmd).
+
+	c, err := m.baseContainer(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.WithExec(cmd).
 		Directory("/unpack"), nil
 }
 
@@ -213,8 +233,12 @@ func (m *Kit) Pull(ctx context.Context, reference string) (*Kit, error) {
 	if m.PlainHTTP {
 		cmd = append(cmd, fplainHttp)
 	}
-	_, err := m.baseContainer().
-		WithExec(cmd).
+
+	c, err := m.baseContainer(ctx)
+	if err != nil {
+		return nil, err
+	}
+	_, err = c.WithExec(cmd).
 		Stdout(ctx)
 	if err != nil {
 		return nil, err
@@ -227,9 +251,14 @@ func (m *Kit) Push(ctx context.Context, reference string) error {
 	if m.PlainHTTP {
 		cmd = append(cmd, fplainHttp)
 	}
-	_, err := m.baseContainer().
-		WithExec(cmd).
+	c, err := m.baseContainer(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.WithExec(cmd).
 		Stdout(ctx)
+
 	if err != nil {
 		return err
 	}
@@ -241,8 +270,12 @@ func (m *Kit) Tag(ctx context.Context, currentRef string, newRef string) (*Kit, 
 	if m.PlainHTTP {
 		cmd = append(cmd, fplainHttp)
 	}
-	_, err := m.baseContainer().
-		WithExec(cmd).
+
+	c, err := m.baseContainer(ctx)
+	if err != nil {
+		return nil, err
+	}
+	_, err = c.WithExec(cmd).
 		Stdout(ctx)
 	if err != nil {
 		return nil, err
