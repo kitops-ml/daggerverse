@@ -1,0 +1,19 @@
+name: Run dagger examples
+on:
+  pull_request: 
+    
+jobs:
+  examples:
+    name: Run examples 
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      
+      - name: Run
+        uses: dagger/dagger-for-github@ad6a4e308a42fb2cf9be8b060f9aba9d57d4c9aa
+        with:
+          version: "latest"
+          verb: call
+          module: ./tests
+          args: all

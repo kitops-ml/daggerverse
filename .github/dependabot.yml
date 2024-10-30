@@ -1,0 +1,23 @@
+version: 2
+updates:
+- package-ecosystem: "gomod"
+  directory: "/"
+  schedule:
+    interval: "weekly"
+    day: "tuesday"
+  groups:
+    go-minor:
+      update-types:
+        - minor
+        - patch
+
+- package-ecosystem: "github-actions"
+  directory: "/"
+  schedule:
+    interval: "weekly"
+    day: "tuesday"
+  groups:
+    actions-minor:
+      update-types:
+        - minor
+        - patch

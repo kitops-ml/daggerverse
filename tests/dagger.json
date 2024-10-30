@@ -1,0 +1,16 @@
+{
+  "name": "Tests",
+  "sdk": "go",
+  "dependencies": [
+    {
+      "name": "huggingface",
+      "source": "../huggingface"
+    },
+    {
+      "name": "kit",
+      "source": "../kit"
+    }
+  ],
+  "source": ".",
+  "engineVersion": "v0.13.6"
+}
