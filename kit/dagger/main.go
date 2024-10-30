@@ -129,7 +129,7 @@ func (m *Kit) downloadKit() (*dagger.File, error) {
 	return dag.CurrentModule().WorkdirFile("kit"), nil
 }
 
-func (m *Kit) baseContainer(ctx context.Context) (*dagger.Container, error) {
+func (m *Kit) baseContainer(_ context.Context) (*dagger.Container, error) {
 
 	cacheOpts := &dagger.ContainerWithMountedCacheOpts{
 		Sharing: dagger.Private,
