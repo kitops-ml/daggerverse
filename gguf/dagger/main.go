@@ -1,3 +1,10 @@
+// Dagger functions for working with GGUF format for AI/ML models.
+
+// ConvertToGGuf converts a model to GGUF format.
+// Quantize applies quantization to a given model(gguf) file.
+//
+// Uses tools from llama.cpp project  to perform the conversion and quantization.
+
 package main
 
 import (
@@ -8,7 +15,7 @@ import (
 const (
 	ggufConvertScript = "/app/convert_hf_to_gguf.py"
 	llamacppImageRef  = "ghcr.io/ggerganov/llama.cpp:full"
-	convertedFileName = "converted.gguf"
+	convertedFileName = "converted.gguf"	
 	quantizedFileName = "quantized.gguf"
 )
 
