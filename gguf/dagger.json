@@ -2,5 +2,5 @@
   "name": "gguf",
   "sdk": "go",
   "source": "dagger",
-  "engineVersion": "v0.13.6"
+  "engineVersion": "v0.13.5"
 }
