@@ -1,3 +1,13 @@
+// Functions for working with ModelKits in Dagger
+//
+// ModelKit is an OCI-compliant packaging format, that
+// encapsulates datasets, code, docs, configurations, and model weights 
+// into a single, standardized unit.
+//
+// See kitops.ml for more information.
+//
+// Uses the Kit CLI to pack, unpack, pull, push, and tag ModelKits.
+
 package main
 
 import (
@@ -150,6 +160,7 @@ func (m *Kit) baseContainer(_ context.Context) (*dagger.Container, error) {
 	return m.Container, nil
 }
 
+// Authenticates the user with the remote registry
 func (m *Kit) WithAuth(ctx context.Context, username string, password *dagger.Secret) (*Kit, error) {
 	cmd := []string{kitCommand, "login", "-v", m.Registry, "-u", username, "-p", "$KIT_PASSWORD"}
 	if m.PlainHTTP {
@@ -174,6 +185,7 @@ func (m *Kit) WithAuth(ctx context.Context, username string, password *dagger.Se
 	return m, nil
 }
 
+// Packs a directory into a ModelKit
 func (m *Kit) Pack(ctx context.Context,
 	// directory to pack
 	directory *dagger.Directory,
@@ -202,6 +214,7 @@ func (m *Kit) Pack(ctx context.Context,
 	return m, nil
 }
 
+// Unpacks a ModelKit into a directory
 func (m *Kit) Unpack(ctx context.Context,
 	// reference to the ModelKit
 	reference string,
@@ -228,6 +241,7 @@ func (m *Kit) Unpack(ctx context.Context,
 		Directory("/unpack"), nil
 }
 
+// Pulls a ModelKit from the registry
 func (m *Kit) Pull(ctx context.Context, reference string) (*Kit, error) {
 	cmd := []string{kitCommand, "pull", reference}
 	if m.PlainHTTP {
@@ -246,6 +260,7 @@ func (m *Kit) Pull(ctx context.Context, reference string) (*Kit, error) {
 	return m, nil
 }
 
+// Pushes a ModelKit to the registry
 func (m *Kit) Push(ctx context.Context, reference string) error {
 	cmd := []string{kitCommand, "push", reference}
 	if m.PlainHTTP {
@@ -265,6 +280,7 @@ func (m *Kit) Push(ctx context.Context, reference string) error {
 	return nil
 }
 
+// Tags a ModelKit
 func (m *Kit) Tag(ctx context.Context, currentRef string, newRef string) (*Kit, error) {
 	cmd := []string{kitCommand, "tag", currentRef, newRef}
 	if m.PlainHTTP {

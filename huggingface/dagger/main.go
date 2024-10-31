@@ -1,3 +1,10 @@
+// Dagger functions for downloading Huggingface repos and files.
+//
+// DownloadRepo downloads a Huggingface repo and returns the Directory to the downloaded repo.
+// DownloadFile downloads a single file from Huggingface repo and returns the File.
+//
+// Uses the Huggingface CLI to download the repos and files.
+
 package main
 
 import (
