@@ -1,7 +1,7 @@
 // Functions for working with ModelKits in Dagger
 //
 // ModelKit is an OCI-compliant packaging format, that
-// encapsulates datasets, code, docs, configurations, and model weights 
+// encapsulates datasets, code, docs, configurations, and model weights
 // into a single, standardized unit.
 //
 // See kitops.ml for more information.
@@ -23,7 +23,7 @@ const (
 	fplainHttp    = "--plain-http"
 	baseImageRef  = "cgr.dev/chainguard/wolfi-base:latest"
 	kitCommand    = "/app/kit"
-	kitOpsHomeDir = "./kitops"
+	kitOpsHomeDir = "/kitops"
 )
 
 type Kit struct {
