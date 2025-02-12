@@ -1,6 +1,6 @@
 # KitOps modules for dagger
 
-A series of [dagger](https://dagger.io/) modules for automating ModelKit operations.
+A series of [Dagger](https://dagger.io/) modules for automating [KitOps ModelKit](https://github.com/jozu-ai/kitops) operations.
 
 ## Included Modules
 
