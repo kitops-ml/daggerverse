@@ -11,7 +11,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       
       - name: Run
-        uses: dagger/dagger-for-github@31393402b06d9d3524e2bc67a14f63d1462821ab
+        uses: dagger/dagger-for-github@e47aba410ef9bb9ed81a4d2a97df31061e5e842e
         with:
           version: "latest"
           verb: call
