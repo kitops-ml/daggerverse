@@ -3,7 +3,7 @@ package:
   name: Test package
   version: 3.0.0
   description: This is a test ModelKit
-  authors: ['Jozu AI']
+  authors: ['The KitOps Authors']
 code:
   - path: README.md
     description: Readme file.
