@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	latestReleaseAPIURL = "https://api.github.com/repos/jozu-ai/kitops/releases/latest"
-	releaseAPIURL       = "https://api.github.com/repos/jozu-ai/kitops/releases/tags/%s"
+	latestReleaseAPIURL = "https://api.github.com/repos/kitops-ml/kitops/releases/latest"
+	releaseAPIURL       = "https://api.github.com/repos/kitops-ml/kitops/releases/tags/%s"
 )
 
 // Function to fetch the latest release information
